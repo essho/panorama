@@ -1,339 +1,134 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <title>عرض بانورامي لبعض مشاريعنا عصام الكهربائي</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
-    <style>
-        /* تنسيقات لجعل البانوراما تملأ الشاشة */
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-        }
-        #panorama {
-            width: 100%;
-            height: 100%;
-            position: relative; /* مهم لوضع أزرار التحكم فوق البانوراما */
-        }
-
-        /* تنسيق حاوية أزرار التحكم في الأسفل */
-        #controlsContainer {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            left: 20px;
-            display: flex;
-            justify-content: space-between; /* توزيع الأزرار */
-            align-items: flex-end;
-            z-index: 10;
-            gap: 10px; /* مسافة بين مجموعات الأزرار */
-        }
-
-        /* تنسيق أزرار التحكم العامة */
-        .control-button {
-            background-color: rgba(0, 0, 0, 0.6);
-            color: white;
-            border: none;
-            border-radius: 50%; /* لجعل الزر دائريًا */
-            width: 50px;
-            height: 50px;
-            font-size: 1.5em;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            transition: background-color 0.3s ease, transform 0.2s;
-        }
-        .control-button:hover {
-            background-color: rgba(0, 0, 0, 0.8);
-            transform: scale(1.05);
-        }
-        .control-button:active {
-            transform: scale(0.95);
-        }
-        .control-button svg {
-            fill: white;
-            width: 70%;
-            height: 70%;
-        }
-
-        /* مجموعة أزرار السرعة */
-        #speedControls {
-            display: flex;
-            gap: 10px;
-        }
-
-        /* مجموعة أزرار التنقل بين الصور */
-        #navigationControls {
-            display: flex;
-            gap: 10px;
-        }
-    </style>
+  <meta charset="utf-8">
+  <title>عرض بانورامي لبعض مشاريعنا عصام الكهربائي</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <style>
+    button {
+      position: absolute;
+      top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      z-index: 999;
+      background-color: rgba(0,0,0,0.6);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #prevBtn { left: 20px; display: none; }
+    #nextBtn { right: 20px; display: none; }
+    #playBtn { left: 50%; transform: translateX(-50%); }
+  </style>
 </head>
 <body>
+  <!-- المشهد -->
+  <a-scene>
+    <!-- فيديو 360 -->
+    <a-videosphere id="videoSphere" src="#video360"></a-videosphere>
 
-    <div id="panorama"></div>
+    <!-- صور 360 -->
+    <a-sky id="sky" visible="false" rotation="0 0 0"></a-sky>
 
-    <audio id="backgroundMusic" loop>
-        <source src="background_music.mp3" type="audio/mpeg">
-        متصفحك لا يدعم عنصر الصوت.
-    </audio>
+    <!-- الكاميرا -->
+    <a-camera wasd-controls-enabled="false" look-controls="enabled: true;"></a-camera>
 
-    <div id="controlsContainer">
-        <div id="speedControls">
-            <button id="speedDownBtn" class="control-button">🐢</button> <button id="speedUpBtn" class="control-button">🐇</button> </div>
+    <!-- ملف الفيديو -->
+    <video id="video360" loop="false" playsinline webkit-playsinline crossorigin="anonymous">
+      <source src="videos/my_360_video.mp4" type="video/mp4">
+      المتصفح لا يدعم تشغيل الفيديو.
+    </video>
+  </a-scene>
 
-        <button id="audioControlBtn" class="control-button">🔇</button>
+  <!-- ملف الصوت الخلفي -->
+  <audio id="bgSound" loop>
+    <source src="background_music.mp3">
+    المتصفح لا يدعم تشغيل الصوت.
+  </audio>
 
-        <div id="navigationControls">
-            <button id="prevPanoBtn" class="control-button">
-                <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z"/></svg>
-            </button>
-            <button id="nextPanoBtn" class="control-button">
-                <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
-            </button>
-        </div>
-    </div>
+  <!-- أزرار التحكم -->
+  <button id="prevBtn" onclick="prevImage()">⏮ السابق</button>
+  <button id="nextBtn" onclick="nextImage()">⏭ التالي</button>
+  <button id="playBtn" onclick="startVideo()">▶️ بدء الفيديو بالصوت</button>
 
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
-    <script type="text/javascript">
-        // قائمة بمسارات صور البانوراما
-        const panoramas = [
-            { type: 'equirectangular', path: 'images/pano1.jpg' },
-            { type: 'equirectangular', path: 'images/pano2.jpg' },
-            { type: 'equirectangular', path: 'images/pano3.jpg' },
-            { type: 'equirectangular', path: 'images/pano4.jpg' },
-            { type: 'equirectangular', path: 'images/pano5.jpg' },
-            { type: 'equirectangular', path: 'images/pano6.jpg' },
-            { type: 'equirectangular', path: 'images/pano7.jpg' },
-            { type: 'equirectangular', path: 'images/pano8.jpg' },
-            { type: 'equirectangular', path: 'images/pano9.jpg' },
-            { type: 'equirectangular', path: 'images/pano10.jpg' },
-            { type: 'equirectangular', path: 'images/pano11.jpg' },
-            { type: 'equirectangular', path: 'videos/my_360_video.mp4', video: true } 
-            // تأكد من أن هذا المسار لملف الفيديو صحيح وأن الملف موجود
-            // أضف المزيد من الصور أو الفيديوهات هنا
-        ];
+  <script>
+    const video = document.getElementById('video360');
+    const videoSphere = document.getElementById('videoSphere');
+    const sky = document.getElementById('sky');
+    const bgSound = document.getElementById('bgSound');
+    const playBtn = document.getElementById('playBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
 
-        let currentIndex = 0; // مؤشر الصورة الحالية
-        let panoramaViewer = null; // متغير لمشغل Pannellum
-        let inactivityTimeoutId; // معرف المؤقت الخاص بعدم النشاط
-        let autoTransitionTimeoutId; // مؤقت الانتقال التلقائي بين الصور
-        
-        // إعدادات الدوران والسرعة (يمكن تعديلها)
-        let currentRotationSpeed = -5; // سرعة الدوران الافتراضية (سالب لليسار، موجب لليمين)
-        const rotationSpeedStep = 2; // مقدار التغيير في السرعة
+    const images = [
+      'images/pano1.jpg',
+      'images/pano2.jpg',
+      'images/pano3.jpg',
+      'images/pano4.jpg',
+      'images/pano5.jpg',
+      'images/pano6.jpg',
+      'images/pano7.jpg',
+      'images/pano8.jpg',
+      'images/pano9.jpg',
+      'images/pano10.jpg',
+      'images/pano11.jpg',
+    ];
 
-        // مدة عرض كل بانوراما قبل الانتقال التلقائي
-        const panoramaDisplayDuration = 30000; 
+    let currentIndex = 0;
+    let angle = 0;
 
-        // 5 ثوانٍ من عدم النشاط لإعادة تشغيل الدوران التلقائي
-        const inactivityDelay = 500; 
-        
-        // الحصول على عناصر الصوت والتحكم فيه
-        const backgroundMusic = document.getElementById('backgroundMusic');
-        const audioControlBtn = document.getElementById('audioControlBtn');
-        const speedUpBtn = document.getElementById('speedUpBtn');
-        const speedDownBtn = document.getElementById('speedDownBtn');
-        const prevPanoBtn = document.getElementById('prevPanoBtn');
-        const nextPanoBtn = document.getElementById('nextPanoBtn');
+    function startVideo() {
+      video.muted = false;
+      video.play().then(() => {
+        playBtn.style.display = 'none';
 
+        // السماح بتشغيل الصوت لاحقًا
+        bgSound.play();
+        bgSound.pause();
+        bgSound.currentTime = 0;
+      }).catch(err => {
+        console.log('فشل تشغيل الفيديو:', err);
+      });
+    }
 
-        // متغير لتتبع حالة الصوت (صامت أم لا)
-        let isMuted = true; // ابدأ كصامت
+    video.addEventListener('ended', () => {
+      videoSphere.setAttribute('visible', 'false');
+      sky.setAttribute('visible', 'true');
+      sky.setAttribute('src', images[currentIndex]);
 
-        // دالة لتشغيل/إيقاف الصوت
-        function toggleAudio() {
-            if (backgroundMusic.paused) {
-                backgroundMusic.play().then(() => {
-                    audioControlBtn.textContent = '🔊'; // رمز صوت مرتفع
-                    isMuted = false;
-                }).catch(error => {
-                    console.error("Failed to play audio:", error);
-                    alert("المتصفح منع التشغيل التلقائي للصوت. الرجاء السماح بذلك يدويًا.");
-                });
-            } else {
-                backgroundMusic.pause();
-                audioControlBtn.textContent = '🔇'; // رمز صامت
-                isMuted = true;
-            }
+      prevBtn.style.display = 'block';
+      nextBtn.style.display = 'block';
+
+      startAutoRotate();
+
+      bgSound.play().catch(err => {
+        console.log("لم يتم تشغيل الصوت تلقائيًا:", err);
+      });
+    });
+
+    function nextImage() {
+      currentIndex = (currentIndex + 1) % images.length;
+      sky.setAttribute('src', images[currentIndex]);
+      angle = 0;
+    }
+
+    function prevImage() {
+      currentIndex = (currentIndex - 1 + images.length) % images.length;
+      sky.setAttribute('src', images[currentIndex]);
+      angle = 0;
+    }
+
+    function startAutoRotate() {
+      setInterval(() => {
+        angle += 0.5;
+        if (angle >= 360) {
+          angle = 0;
+          nextImage();
         }
-
-        // دالة لتغيير سرعة الدوران التلقائي
-        function changeRotationSpeed(direction) {
-            if (!panoramaViewer) return; // لا تفعل شيئاً إذا لم يكن المشغل موجوداً
-
-            const oldSpeed = currentRotationSpeed;
-
-            if (direction === 'up') {
-                currentRotationSpeed -= rotationSpeedStep; // لليسار (أسرع)
-                if (currentRotationSpeed < -30) currentRotationSpeed = -30; // حد أقصى للسرعة
-            } else if (direction === 'down') {
-                currentRotationSpeed += rotationSpeedStep; // لليمين (أبطأ)
-                if (currentRotationSpeed > 30) currentRotationSpeed = 30; // حد أدنى للسرعة
-            }
-            
-            // لإيقاف الدوران تماماً يمكن ضبط السرعة على 0
-            if (currentRotationSpeed === 0) {
-                 panoramaViewer.stopAutoRotate();
-                 console.log("Auto-rotation stopped.");
-            } else {
-                 // توقف ثم أعد تشغيل الدوران بالسرعة الجديدة
-                 panoramaViewer.stopAutoRotate(); 
-                 panoramaViewer.startAutoRotate(currentRotationSpeed);
-                 console.log("Rotation Speed set to:", currentRotationSpeed);
-            }
-
-            // أعد ضبط المؤقت عدم النشاط للتأكد من استمرار السلوك المطلوب
-            // فقط إذا لم يكن الدوران صفراً
-            if (currentRotationSpeed !== 0) {
-                resetInactivityTimer();
-            } else {
-                clearTimeout(inactivityTimeoutId); // لا حاجة لمؤقت عدم النشاط إذا توقف الدوران
-            }
-        }
-
-        // دالة للانتقال إلى الصورة التالية
-        function showNextPanorama() {
-            clearTimeout(inactivityTimeoutId); // إلغاء مؤقت عدم النشاط
-            clearTimeout(autoTransitionTimeoutId); // إلغاء مؤقت الانتقال التلقائي
-
-            loadPanorama(currentIndex + 1);
-            resetInactivityTimer(); // ابدأ مؤقت عدم النشاط الجديد مباشرة بعد التغيير اليدوي
-        }
-
-        // دالة للانتقال إلى الصورة السابقة
-        function showPreviousPanorama() {
-            clearTimeout(inactivityTimeoutId); // إلغاء مؤقت عدم النشاط
-            clearTimeout(autoTransitionTimeoutId); // إلغاء مؤقت الانتقال التلقائي
-
-            let newIndex = currentIndex - 1;
-            if (newIndex < 0) {
-                newIndex = panoramas.length - 1; // العودة للنهاية إذا وصلنا للبداية
-            }
-            loadPanorama(newIndex);
-            resetInactivityTimer(); // ابدأ مؤقت عدم النشاط الجديد مباشرة بعد التغيير اليدوي
-        }
-
-        // دالة لإعادة ضبط مؤقت عدم النشاط
-        function resetInactivityTimer() {
-            // قم بمسح المؤقت القديم
-            clearTimeout(inactivityTimeoutId);
-
-            // أعد ضبط المؤقت
-            inactivityTimeoutId = setTimeout(() => {
-                // تأكد أن المشغل موجود وأن الدوران التلقائي ليس صفرًا
-                if (panoramaViewer && currentRotationSpeed !== 0) {
-                    console.log("No activity detected, attempting to resume auto-rotation.");
-                    // **** التغيير الرئيسي هنا ****
-                    // بدلاً من إعادة التحميل الكامل أو محاولة setAutorotate
-                    // سنقوم فقط بمحاولة استئناف الدوران. Pannellum يجب أن يعالج هذا.
-                    // إذا لم يستأنف تلقائيًا، فالمكتبة لا تدعم ذلك بشكل كامل بعد التفاعل.
-                    
-                    // نُجبر Pannellum على إعادة تقييم حالته عن طريق إعادة ضبط زاوية العرض
-                    // هذه الطريقة ألطف من إعادة التحميل الكامل ولا تسبب وميضاً.
-                    panoramaViewer.setYaw(panoramaViewer.getYaw(), 0); // إعادة ضبط Yaw دون حركة، فقط للتنبيه
-                    panoramaViewer.setPitch(panoramaViewer.getPitch(), 0); // إعادة ضبط Pitch
-                    
-                    panoramaViewer.startAutoRotate(currentRotationSpeed); // استئناف الدوران بالسرعة الحالية
-
-                    // يمكنك أيضاً إضافة log للتحقق مما إذا كان الدوران نشطاً:
-                    // console.log("Autorotate active?", panoramaViewer.getAutorotate());
-                    // (تذكر: getAutorotate قد لا يكون متاحاً في بعض الإصدارات)
-                    // **************************
-                }
-            }, inactivityDelay);
-        }
-
-        // دالة لعرض البانوراما
-        function loadPanorama(index) {
-            // قم بإلغاء أي مؤقتات سابقة
-            clearTimeout(inactivityTimeoutId);
-            clearTimeout(autoTransitionTimeoutId); 
-
-            if (index >= panoramas.length) {
-                currentIndex = 0; // العودة للصورة الأولى إذا وصلنا للنهاية
-            } else if (index < 0) {
-                currentIndex = panoramas.length - 1; // الانتقال لآخر صورة إذا رجعنا من الأولى
-            } else {
-                currentIndex = index;
-            }
-
-            // الآن نصل إلى الكائن وليس فقط المسار
-            const currentPanoObject = panoramas[currentIndex];
-            const currentPanoramaPath = currentPanoObject.path;
-            const isVideo = currentPanoObject.video || false; // للتحقق ما إذا كان العنصر الحالي فيديو
-
-            console.log(`Loading panorama: ${currentPanoramaPath} (Index: ${currentIndex}), Is Video: ${isVideo}`);
-
-            // إذا كان هناك مشغل موجود، قم بتدميره أولاً
-            if (panoramaViewer) {
-                panoramaViewer.destroy();
-                panoramaViewer = null; // تعيينه إلى null بعد التدمير
-                document.getElementById('panorama').innerHTML = '';
-            }
-            
-            // الآن، قم بإنشاء مشغل جديد دائمًا
-            const viewerOptions = {
-                "type": isVideo ? 'video' : 'equirectangular', // هنا نحدد نوع 'video' إذا كان فيديو
-                "panorama": currentPanoramaPath,
-                "autoLoad": true,
-                "autoRotate": currentRotationSpeed, // استخدم السرعة الحالية هنا
-                "compass": true,
-                "mouseZoom": true,
-                "showControls": true,
-                "loop": isVideo ? true : false // تكرار الفيديو إذا كان فيديو
-            };
-
-            panoramaViewer = pannellum.viewer('panorama', viewerOptions);
-
-            // إضافة مستمعي أحداث للتحكم في التفاعل بعد إنشاء المشغل
-            panoramaViewer.on('mousedown', resetInactivityTimer);
-            panoramaViewer.on('touchstart', resetInactivityTimer);
-            panoramaViewer.on('mousewheel', resetInactivityTimer); 
-            panoramaViewer.on('touchend', resetInactivityTimer);
-            
-            // ضبط المؤقت للانتقال إلى البانوراما التالية بعد مدة محددة
-            autoTransitionTimeoutId = setTimeout(() => {
-                console.log(`Transitioning to next panorama after ${panoramaDisplayDuration / 1000} seconds.`);
-                loadPanorama(currentIndex + 1);
-            }, panoramaDisplayDuration);
-            
-            // ضبط المؤقت الأولي لعدم النشاط بعد تحميل البانوراما
-            // **هام:** لا تستدعي resetInactivityTimer هنا مباشرةً إذا كانت السرعة صفرًا
-            if (currentRotationSpeed !== 0) {
-                resetInactivityTimer();
-            }
-        }
-
-        // ربط الأزرار بالوظائف
-        document.addEventListener('DOMContentLoaded', () => {
-            // ربط زر الصوت
-            audioControlBtn.addEventListener('click', toggleAudio);
-
-            // ربط أزرار السرعة
-            speedUpBtn.addEventListener('click', () => changeRotationSpeed('up'));
-            speedDownBtn.addEventListener('click', () => changeRotationSpeed('down'));
-
-            // ربط أزرار التنقل
-            prevPanoBtn.addEventListener('click', showPreviousPanorama);
-            nextPanoBtn.addEventListener('click', showNextPanorama);
-
-            if (panoramas.length > 0) {
-                loadPanorama(0); // بدء العرض من الصورة الأولى
-            } else {
-                // رسالة في حالة عدم وجود صور
-                document.getElementById('panorama').innerHTML = '<div style="color: #666; font-size: 1.5em; text-align: center; padding-top: 100px;">الرجاء إضافة صور بانوراما إلى مجلد "images".</div>';
-            }
-        });
-    </script>
-
+        sky.setAttribute('rotation', `0 ${angle} 0`);
+      }, 50);
+    }
+  </script>
 </body>
 </html>
