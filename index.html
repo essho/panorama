@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>عرض صور بانوراما لبعض مشاريعنا عصام الكهربائي</title>
+    <title>عرض بانورامي لبعض مشاريعنا عصام الكهربائي</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
     <style>
         /* تنسيقات لجعل البانوراما تملأ الشاشة */
@@ -105,18 +105,20 @@
     <script type="text/javascript">
         // قائمة بمسارات صور البانوراما
         const panoramas = [
-            'images/pano1.jpg',
-            'images/pano2.jpg',
-            'images/pano3.jpg',
-            'images/pano4.jpg',
-            'images/pano5.jpg',
-            'images/pano6.jpg',
-            'images/pano7.jpg',
-            'images/pano8.jpg',
-            'images/pano9.jpg',
-            'images/pano10.jpg',
-            'images/pano11.jpg'
-            // أضف المزيد من مسارات صورك هنا، على الأقل صورتين للاختبار
+            { type: 'equirectangular', path: 'images/pano1.jpg' },
+            { type: 'equirectangular', path: 'images/pano2.jpg' },
+            { type: 'equirectangular', path: 'images/pano3.jpg' },
+            { type: 'equirectangular', path: 'images/pano4.jpg' },
+            { type: 'equirectangular', path: 'images/pano5.jpg' },
+            { type: 'equirectangular', path: 'images/pano6.jpg' },
+            { type: 'equirectangular', path: 'images/pano7.jpg' },
+            { type: 'equirectangular', path: 'images/pano8.jpg' },
+            { type: 'equirectangular', path: 'images/pano9.jpg' },
+            { type: 'equirectangular', path: 'images/pano10.jpg' },
+            { type: 'equirectangular', path: 'images/pano11.jpg' },
+            { type: 'equirectangular', path: 'videos/my_360_video.mp4', video: true } 
+            // تأكد من أن هذا المسار لملف الفيديو صحيح وأن الملف موجود
+            // أضف المزيد من الصور أو الفيديوهات هنا
         ];
 
         let currentIndex = 0; // مؤشر الصورة الحالية
@@ -125,7 +127,7 @@
         let autoTransitionTimeoutId; // مؤقت الانتقال التلقائي بين الصور
         
         // إعدادات الدوران والسرعة (يمكن تعديلها)
-        let currentRotationSpeed = -10; // سرعة الدوران الافتراضية (سالب لليسار، موجب لليمين)
+        let currentRotationSpeed = -5; // سرعة الدوران الافتراضية (سالب لليسار، موجب لليمين)
         const rotationSpeedStep = 2; // مقدار التغيير في السرعة
 
         // مدة عرض كل بانوراما قبل الانتقال التلقائي
@@ -189,7 +191,12 @@
             }
 
             // أعد ضبط المؤقت عدم النشاط للتأكد من استمرار السلوك المطلوب
-            resetInactivityTimer();
+            // فقط إذا لم يكن الدوران صفراً
+            if (currentRotationSpeed !== 0) {
+                resetInactivityTimer();
+            } else {
+                clearTimeout(inactivityTimeoutId); // لا حاجة لمؤقت عدم النشاط إذا توقف الدوران
+            }
         }
 
         // دالة للانتقال إلى الصورة التالية
@@ -216,20 +223,30 @@
 
         // دالة لإعادة ضبط مؤقت عدم النشاط
         function resetInactivityTimer() {
-            // قم بإيقاف الدوران التلقائي فوراً عند أي تفاعل يدوي
-            if (panoramaViewer) {
-                panoramaViewer.stopAutoRotate(); // **تأكد من إيقاف الدوران هنا**
-            }
-
-            // مسح المؤقت القديم وإعداد مؤقت جديد
+            // قم بمسح المؤقت القديم
             clearTimeout(inactivityTimeoutId);
+
+            // أعد ضبط المؤقت
             inactivityTimeoutId = setTimeout(() => {
-                if (panoramaViewer) {
-                    console.log("No activity detected, resuming auto-rotation.");
-                    // استئناف الدوران بالسرعة الحالية
-                    if (currentRotationSpeed !== 0) {
-                        panoramaViewer.startAutoRotate(currentRotationSpeed); // **وتأكد من استئنافه هنا**
-                    }
+                // تأكد أن المشغل موجود وأن الدوران التلقائي ليس صفرًا
+                if (panoramaViewer && currentRotationSpeed !== 0) {
+                    console.log("No activity detected, attempting to resume auto-rotation.");
+                    // **** التغيير الرئيسي هنا ****
+                    // بدلاً من إعادة التحميل الكامل أو محاولة setAutorotate
+                    // سنقوم فقط بمحاولة استئناف الدوران. Pannellum يجب أن يعالج هذا.
+                    // إذا لم يستأنف تلقائيًا، فالمكتبة لا تدعم ذلك بشكل كامل بعد التفاعل.
+                    
+                    // نُجبر Pannellum على إعادة تقييم حالته عن طريق إعادة ضبط زاوية العرض
+                    // هذه الطريقة ألطف من إعادة التحميل الكامل ولا تسبب وميضاً.
+                    panoramaViewer.setYaw(panoramaViewer.getYaw(), 0); // إعادة ضبط Yaw دون حركة، فقط للتنبيه
+                    panoramaViewer.setPitch(panoramaViewer.getPitch(), 0); // إعادة ضبط Pitch
+                    
+                    panoramaViewer.startAutoRotate(currentRotationSpeed); // استئناف الدوران بالسرعة الحالية
+
+                    // يمكنك أيضاً إضافة log للتحقق مما إذا كان الدوران نشطاً:
+                    // console.log("Autorotate active?", panoramaViewer.getAutorotate());
+                    // (تذكر: getAutorotate قد لا يكون متاحاً في بعض الإصدارات)
+                    // **************************
                 }
             }, inactivityDelay);
         }
@@ -248,8 +265,12 @@
                 currentIndex = index;
             }
 
-            const currentPanoramaPath = panoramas[currentIndex];
-            console.log(`Loading panorama: ${currentPanoramaPath} (Index: ${currentIndex})`);
+            // الآن نصل إلى الكائن وليس فقط المسار
+            const currentPanoObject = panoramas[currentIndex];
+            const currentPanoramaPath = currentPanoObject.path;
+            const isVideo = currentPanoObject.video || false; // للتحقق ما إذا كان العنصر الحالي فيديو
+
+            console.log(`Loading panorama: ${currentPanoramaPath} (Index: ${currentIndex}), Is Video: ${isVideo}`);
 
             // إذا كان هناك مشغل موجود، قم بتدميره أولاً
             if (panoramaViewer) {
@@ -259,24 +280,23 @@
             }
             
             // الآن، قم بإنشاء مشغل جديد دائمًا
-            panoramaViewer = pannellum.viewer('panorama', {
-                "type": "equirectangular",
+            const viewerOptions = {
+                "type": isVideo ? 'video' : 'equirectangular', // هنا نحدد نوع 'video' إذا كان فيديو
                 "panorama": currentPanoramaPath,
                 "autoLoad": true,
                 "autoRotate": currentRotationSpeed, // استخدم السرعة الحالية هنا
-                "compass": true,               // إظهار البوصلة
-                "mouseZoom": true,             // تفعيل التكبير/التصغير بالماوس
-                "showControls": true           // إظهار أزرار التحكم
-            });
+                "compass": true,
+                "mouseZoom": true,
+                "showControls": true,
+                "loop": isVideo ? true : false // تكرار الفيديو إذا كان فيديو
+            };
 
-            // إضافة مستمعي أحداث للتعامل مع تفاعل المستخدم بعد إنشاء المشغل
-            // التأكد من ربط أحداث الماوس واللمس بدالة resetInactivityTimer
+            panoramaViewer = pannellum.viewer('panorama', viewerOptions);
+
+            // إضافة مستمعي أحداث للتحكم في التفاعل بعد إنشاء المشغل
             panoramaViewer.on('mousedown', resetInactivityTimer);
             panoramaViewer.on('touchstart', resetInactivityTimer);
-            // **** هذا هو السطر المهم الذي تم التأكيد عليه ****
-            panoramaViewer.on('mousewheel', resetInactivityTimer); // يجب أن يكون هذا السطر موجوداً
-            // *************************************************
-
+            panoramaViewer.on('mousewheel', resetInactivityTimer); 
             panoramaViewer.on('touchend', resetInactivityTimer);
             
             // ضبط المؤقت للانتقال إلى البانوراما التالية بعد مدة محددة
@@ -286,7 +306,10 @@
             }, panoramaDisplayDuration);
             
             // ضبط المؤقت الأولي لعدم النشاط بعد تحميل البانوراما
-            resetInactivityTimer();
+            // **هام:** لا تستدعي resetInactivityTimer هنا مباشرةً إذا كانت السرعة صفرًا
+            if (currentRotationSpeed !== 0) {
+                resetInactivityTimer();
+            }
         }
 
         // ربط الأزرار بالوظائف
